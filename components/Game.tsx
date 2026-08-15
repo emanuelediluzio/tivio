@@ -57,7 +57,7 @@ export function Game() {
     !game.gameOver;
 
   return (
-    <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col gap-4 px-4 py-6 text-stone-50">
+    <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col gap-3 sm:gap-4 px-3 sm:px-4 py-4 sm:py-6 text-stone-50">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Ti Vitti</h1>
@@ -121,11 +121,11 @@ export function Game() {
       />
 
       {/* Foundations */}
-      <div className="rounded-xl bg-black/20 border border-white/10 p-4">
+      <div className="rounded-xl bg-black/20 border border-white/10 p-3 sm:p-4">
         <div className="text-xs uppercase tracking-wide text-amber-100/60 mb-2">
           Fondazioni
         </div>
-        <div className="grid grid-cols-4 gap-3 max-w-md">
+        <div className="grid grid-cols-4 gap-2 sm:gap-3 max-w-md">
           {[0, 1, 2, 3].map((i) => {
             const pile = game.foundations[i];
             const top = pile?.cards[pile.cards.length - 1];
@@ -154,7 +154,7 @@ export function Game() {
       />
 
       {/* Action area */}
-      <div className="rounded-xl bg-black/25 border border-white/10 p-4 flex flex-col items-center gap-3 min-h-[9rem]">
+      <div className="rounded-xl bg-black/25 border border-white/10 p-3 sm:p-4 flex flex-col items-center justify-center gap-3 min-h-[6rem] sm:min-h-[9rem]">
         {canCatch && (
           <button
             onClick={() => setGame((g) => callTiVitti(g))}
@@ -207,7 +207,7 @@ export function Game() {
       </div>
 
       {/* Log */}
-      <div className="rounded-xl bg-black/20 border border-white/10 p-3 h-32 overflow-y-auto text-xs text-amber-100/70 space-y-1">
+      <div className="rounded-xl bg-black/20 border border-white/10 p-3 h-24 sm:h-32 overflow-y-auto text-xs text-amber-100/70 space-y-1">
         {game.log.map((line, i) => (
           <div key={i}>{line}</div>
         ))}
