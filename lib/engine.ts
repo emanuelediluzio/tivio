@@ -207,6 +207,10 @@ export function callTiVitti(state: GameState): GameState {
   return next;
 }
 
+export function clearPenaltyFlash(state: GameState): GameState {
+  return state.penaltyFlash ? { ...state, penaltyFlash: null } : state;
+}
+
 // ---- CPU turn: advance exactly one flip ----
 
 export function cpuStep(state: GameState): GameState {

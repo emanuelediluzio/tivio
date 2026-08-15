@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   callTiVitti,
+  clearPenaltyFlash,
   cpuStep,
   flipOwn,
   newGame,
@@ -38,6 +39,12 @@ export function Game() {
     logEndRef.current?.scrollIntoView({ block: "nearest" });
   }, [game.log.length]);
 
+  useEffect(() => {
+    if (!game.penaltyFlash) return;
+    const t = setTimeout(() => setGame((g) => clearPenaltyFlash(g)), 2200);
+    return () => clearTimeout(t);
+  }, [game.penaltyFlash, game.log.length]);
+
   const you = game.players.you;
   const cpu = game.players.cpu;
   const youDiscardTop = you.discard[you.discard.length - 1];
@@ -51,7 +58,7 @@ export function Game() {
 
   return (
     <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col gap-4 px-4 py-6 text-stone-50">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Ti Vitti</h1>
           <p className="text-xs text-amber-100/70">
@@ -61,20 +68,28 @@ export function Game() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowRules((s) => !s)}
-            className="px-3 py-1.5 text-sm rounded-full border border-white/20 hover:bg-white/10 transition"
+            className="btn-ghost"
           >
             Regole
           </button>
-          <button
-            onClick={() => setGame(newGame())}
-            className="px-3 py-1.5 text-sm rounded-full border border-white/20 hover:bg-white/10 transition"
-          >
+          <button onClick={() => setGame(newGame())} className="btn-ghost">
             Nuova partita
           </button>
         </div>
       </header>
 
       {showRules && <RulesPanel onClose={() => setShowRules(false)} />}
+
+      {game.penaltyFlash && (
+        <div
+          key={game.log.length}
+          className="animate-toast rounded-xl bg-amber-500/90 text-stone-900 font-semibold text-center py-2 text-sm shadow-lg"
+        >
+          Ti vitti! {game.penaltyFlash.target === "you" ? "Tu prendi" : "Il CPU prende"}{" "}
+          {game.penaltyFlash.amount} cart{game.penaltyFlash.amount === 1 ? "a" : "e"} di
+          penalità.
+        </div>
+      )}
 
       {game.gameOver && (
         <div
@@ -85,7 +100,10 @@ export function Game() {
           }`}
         >
           {game.winner === "you" ? "Hai vinto! 🎉" : "Ha vinto il CPU."} —{" "}
-          <button className="underline" onClick={() => setGame(newGame())}>
+          <button
+            className="underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 rounded"
+            onClick={() => setGame(newGame())}
+          >
             gioca ancora
           </button>
         </div>
@@ -113,7 +131,11 @@ export function Game() {
             const top = pile?.cards[pile.cards.length - 1];
             return (
               <div key={i} className="flex flex-col items-center gap-1">
-                {top ? <PlayingCard card={top} className="w-16" /> : <EmptySlot className="w-16" />}
+                {top ? (
+                  <PlayingCard card={top} className="w-14 sm:w-16 md:w-20" />
+                ) : (
+                  <EmptySlot className="w-14 sm:w-16 md:w-20" />
+                )}
                 <span className="text-[10px] text-amber-100/50">
                   {pile ? `${pile.cards.length}/10` : "vuota"}
                 </span>
@@ -136,7 +158,7 @@ export function Game() {
         {canCatch && (
           <button
             onClick={() => setGame((g) => callTiVitti(g))}
-            className="px-5 py-2 rounded-full bg-amber-500 text-stone-900 font-bold shadow-lg animate-pulse hover:bg-amber-400 transition"
+            className="btn-primary animate-pulse"
           >
             Ti vitti! Il CPU ha sbagliato
           </button>
@@ -146,7 +168,7 @@ export function Game() {
           <button
             disabled={you.stock.length === 0}
             onClick={() => setGame((g) => flipOwn(g))}
-            className="px-6 py-2.5 rounded-full bg-amber-500 text-stone-900 font-bold shadow-lg hover:bg-amber-400 transition disabled:opacity-40"
+            className="btn-primary"
           >
             Pesca una carta
           </button>
@@ -158,13 +180,17 @@ export function Game() {
               Hai girato: <strong>{RANK_LABELS[game.flipped.rank]}</strong> di{" "}
               {SUIT_LABELS[game.flipped.suit]}
             </div>
-            <PlayingCard card={game.flipped} className="w-20" />
+            <PlayingCard
+              key={game.flipped.id}
+              card={game.flipped}
+              className="w-20 sm:w-24 animate-flip-in"
+            />
             <div className="flex flex-wrap gap-2 justify-center">
               {game.options.map((opt) => (
                 <button
                   key={opt}
                   onClick={() => setGame((g) => placeFlipped(g, opt))}
-                  className="px-4 py-2 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 transition text-sm"
+                  className="btn-option"
                 >
                   {OPTION_LABEL[opt]}
                 </button>
@@ -210,19 +236,23 @@ function PlayerZone({
         align === "end" ? "flex-row-reverse" : ""
       }`}
     >
-      <div className="flex flex-col items-center gap-1 w-16">
-        {stockCount > 0 ? <CardBack className="w-16" /> : <EmptySlot className="w-16" />}
+      <div className="flex flex-col items-center gap-1 w-14 sm:w-16 md:w-20">
+        {stockCount > 0 ? (
+          <CardBack className="w-14 sm:w-16 md:w-20" />
+        ) : (
+          <EmptySlot className="w-14 sm:w-16 md:w-20" />
+        )}
         <span className="text-[10px] text-amber-100/60">{stockCount} carte</span>
       </div>
-      <div className="flex flex-col items-center gap-1 w-16">
+      <div className="flex flex-col items-center gap-1 w-14 sm:w-16 md:w-20">
         {discardTop ? (
           <PlayingCard
             card={discardTop}
-            className="w-16"
+            className="w-14 sm:w-16 md:w-20"
             highlight={flaggedCardId === discardTop.id}
           />
         ) : (
-          <EmptySlot className="w-16" />
+          <EmptySlot className="w-14 sm:w-16 md:w-20" />
         )}
         <span className="text-[10px] text-amber-100/60">pila</span>
       </div>

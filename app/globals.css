@@ -26,3 +26,54 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   min-height: 100dvh;
 }
+
+.btn-ghost {
+  @apply px-3 py-1.5 text-sm rounded-full border border-white/20 hover:bg-white/10 active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300;
+}
+
+.btn-primary {
+  @apply px-6 py-2.5 rounded-full bg-amber-500 text-stone-900 font-bold shadow-lg hover:bg-amber-400 active:scale-95 transition disabled:opacity-40 disabled:hover:bg-amber-500 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300;
+}
+
+.btn-option {
+  @apply px-4 py-2 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 active:scale-95 transition text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300;
+}
+
+@keyframes card-flip-in {
+  from {
+    transform: rotateY(90deg) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-flip-in {
+  animation: card-flip-in 0.35s ease-out;
+  transform-style: preserve-3d;
+}
+
+@keyframes toast-in-out {
+  0% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  12% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  88% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+}
+
+.animate-toast {
+  animation: toast-in-out 2.2s ease-in-out forwards;
+}
