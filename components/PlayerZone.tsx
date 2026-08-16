@@ -6,13 +6,11 @@ export function PlayerZone({
   stockCount,
   discardTop,
   align,
-  flaggedCardId,
 }: {
   name: string;
   stockCount: number;
   discardTop: CardT | undefined;
   align: "start" | "end";
-  flaggedCardId?: string;
 }) {
   return (
     <div className={`flex items-center gap-4 ${align === "end" ? "flex-row-reverse" : ""}`}>
@@ -26,11 +24,7 @@ export function PlayerZone({
       </div>
       <div className="flex flex-col items-center gap-1 w-14 sm:w-16 md:w-20">
         {discardTop ? (
-          <PlayingCard
-            card={discardTop}
-            className="w-14 sm:w-16 md:w-20"
-            highlight={flaggedCardId === discardTop.id}
-          />
+          <PlayingCard card={discardTop} className="w-14 sm:w-16 md:w-20" />
         ) : (
           <EmptySlot className="w-14 sm:w-16 md:w-20" />
         )}

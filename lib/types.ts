@@ -42,9 +42,23 @@ export interface FoundationPile {
 
 export type PlacementTarget = "foundation" | "opponent" | "discard";
 
+export const PLACEMENT_TARGETS: PlacementTarget[] = [
+  "foundation",
+  "opponent",
+  "discard",
+];
+
+// Why someone is taking penalty cards:
+// - "missed": the card was playable, but it got discarded anyway.
+// - "illegal": it was played somewhere it could not legally go.
+// - "false-call": "Ti vitti!" was shouted when there was nothing to catch,
+//   which costs the caller instead.
+export type MisplayReason = "missed" | "illegal" | "false-call";
+
 export interface PendingMisplay {
   owner: PlayerId;
   cardId: string;
+  reason: MisplayReason;
 }
 
 export interface GameState {
@@ -52,7 +66,11 @@ export interface GameState {
   foundations: FoundationPile[];
   turn: PlayerId;
   flipped: CardT | null;
-  options: PlacementTarget[];
+  // Where the flipped card could legitimately go ("foundation"/"opponent";
+  // empty means the card is dead and discarding is the right call). Used to
+  // judge the move after the fact — deliberately NOT used to build the
+  // button list, since spotting playable cards is the player's job.
+  playable: PlacementTarget[];
   pendingMisplay: PendingMisplay | null;
   log: string[];
   winner: PlayerId | null;

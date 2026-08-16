@@ -9,7 +9,13 @@ import {
   newGame,
   placeFlipped,
 } from "@/lib/engine";
-import { GameState, PlacementTarget, RANK_LABELS, SUIT_LABELS } from "@/lib/types";
+import {
+  GameState,
+  PLACEMENT_TARGETS,
+  PlacementTarget,
+  RANK_LABELS,
+  SUIT_LABELS,
+} from "@/lib/types";
 import { EmptySlot, PlayingCard } from "./PlayingCard";
 import { PlayerZone } from "./PlayerZone";
 import { RulesPanel } from "./RulesPanel";
@@ -50,12 +56,9 @@ export function Game({ onExit }: { onExit?: () => void }) {
   const cpu = game.players.cpu;
   const youDiscardTop = you.discard[you.discard.length - 1];
   const cpuDiscardTop = cpu.discard[cpu.discard.length - 1];
-  const canCatch =
-    !!game.pendingMisplay &&
-    game.pendingMisplay.owner === "cpu" &&
-    game.turn === "you" &&
-    !game.flipped &&
-    !game.gameOver;
+  // Offered on every turn, never only when there is really something to
+  // catch — otherwise the button itself would give the CPU's slip away.
+  const canCatch = game.turn === "you" && !game.flipped && !game.gameOver;
 
   return (
     <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col gap-3 sm:gap-4 px-3 sm:px-4 py-4 sm:py-6 text-stone-50">
@@ -121,9 +124,6 @@ export function Game({ onExit }: { onExit?: () => void }) {
         stockCount={cpu.stock.length}
         discardTop={cpuDiscardTop}
         align="start"
-        flaggedCardId={
-          game.pendingMisplay?.owner === "cpu" ? game.pendingMisplay.cardId : undefined
-        }
       />
 
       {/* Foundations */}
@@ -164,9 +164,10 @@ export function Game({ onExit }: { onExit?: () => void }) {
         {canCatch && (
           <button
             onClick={() => setGame((g) => callTiVitti(g))}
-            className="btn-primary animate-pulse"
+            className="btn-option border-amber-400/50 text-amber-200"
+            title="Se il CPU non ha sbagliato, le 3 carte le prendi tu"
           >
-            Ti vitti! Il CPU ha sbagliato
+            Ti vitti!
           </button>
         )}
 
@@ -191,8 +192,11 @@ export function Game({ onExit }: { onExit?: () => void }) {
               card={game.flipped}
               className="w-20 sm:w-24 animate-flip-in"
             />
+            {/* Always every option: working out which one is right is
+                the game. Showing only the legal ones would hand over the
+                answer and make "Ti vitti!" impossible to trigger. */}
             <div className="flex flex-wrap gap-2 justify-center">
-              {game.options.map((opt) => (
+              {PLACEMENT_TARGETS.map((opt) => (
                 <button
                   key={opt}
                   onClick={() => setGame((g) => placeFlipped(g, opt))}

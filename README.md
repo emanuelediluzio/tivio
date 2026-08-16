@@ -20,15 +20,27 @@ faccia in giù, tra te e il CPU.
   dell'avversario si può scaricare lì, con un'altra pescata di bonus.
 - Se nessuna di queste mosse è possibile, la carta è "morta" e va scartata
   sulla tua pila: il turno passa all'avversario.
-- Se scarti una carta quando invece potevi giocarla, il CPU grida **"Ti
-  vitti!"** e ti penalizza con 3 carte in più. Se è il CPU a sbagliare, puoi
-  gridarlo tu cliccando il pulsante che appare.
 - Vince chi esaurisce per primo il proprio mazzo.
 
+### Niente aiutini
+
+Il cuore del gioco è accorgersi da soli di cosa si può fare, quindi
+l'interfaccia non risponde mai al posto tuo:
+
+- **I tre pulsanti sono sempre tutti presenti**, anche quando la mossa non è
+  legale. Se piazzi la carta dove non ci sta, non ci arriva — finisce sui tuoi
+  scarti — ed è un errore esattamente come scartare una carta ancora giocabile.
+- **Nel log le due cose sono indistinguibili da uno scarto normale.** Chi
+  guarda deve valutare da sé se quella carta era ancora viva.
+- **Il pulsante "Ti vitti!" è sempre disponibile**, anche quando non c'è nulla
+  da cogliere: nessuno ti avvisa che l'avversario ha sbagliato. Ma gridare a
+  vuoto costa — le 3 carte di penalità le prendi tu.
+
+Contro il CPU la penalità è immediata (non si distrae mai quando tocca a te);
+online invece scatta solo se l'avversario se ne accorge in tempo.
+
 Le regole complete sono consultabili anche dentro l'app tramite il pulsante
-**Regole**. In modalità online nessuno viene penalizzato in automatico: se
-sbagli una mossa tocca all'avversario accorgersene e gridare "Ti vitti!"
-entro il proprio turno successivo (e vale anche il contrario).
+**Regole**.
 
 ## Modalità online
 

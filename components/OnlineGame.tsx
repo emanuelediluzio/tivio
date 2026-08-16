@@ -5,12 +5,20 @@ import {
   catchMisplay,
   clearPenaltyFlash,
   drawCard,
+  judgeMove,
   Labels,
   newOnlineGame,
   resolveDraw,
 } from "@/lib/engine";
 import { useRoomConnection } from "@/lib/net";
-import { GameState, PlacementTarget, PlayerId, RANK_LABELS, SUIT_LABELS } from "@/lib/types";
+import {
+  GameState,
+  PLACEMENT_TARGETS,
+  PlacementTarget,
+  PlayerId,
+  RANK_LABELS,
+  SUIT_LABELS,
+} from "@/lib/types";
 import { EmptySlot, PlayingCard } from "./PlayingCard";
 import { PlayerZone } from "./PlayerZone";
 import { RulesPanel } from "./RulesPanel";
@@ -36,6 +44,7 @@ export function OnlineGame({
   const [mySlot, setMySlot] = useState<PlayerId | null>(null);
   const [labels, setLabels] = useState<Labels | null>(null);
   const [showRules, setShowRules] = useState(false);
+  const [selfNote, setSelfNote] = useState<string | null>(null);
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
   const [joinInput, setJoinInput] = useState(initialRoomCode ?? "");
 
@@ -95,11 +104,34 @@ export function OnlineGame({
     return () => clearTimeout(t);
   }, [game?.penaltyFlash, game?.log.length]);
 
+  useEffect(() => {
+    if (!selfNote) return;
+    const t = setTimeout(() => setSelfNote(null), 2600);
+    return () => clearTimeout(t);
+  }, [selfNote, game?.log.length]);
+
   const act = (updater: (g: GameState) => GameState) => {
     if (!game) return;
     const next = updater(game);
     setGame(next);
     send({ kind: "state", state: next });
+  };
+
+  // Private feedback for the player who just moved, so a fumble is not a
+  // mystery. Kept in local state rather than the game log on purpose: the
+  // log is shared, and telling the opponent about the slip would rob them
+  // of having to spot it.
+  const playCard = (target: PlacementTarget) => {
+    if (!game || !mySlot || !labels) return;
+    const verdict = judgeMove(game.playable, target);
+    setSelfNote(
+      verdict.reason === "illegal"
+        ? "Quella carta lì non ci poteva andare: è finita sui tuoi scarti."
+        : verdict.reason === "missed"
+          ? "Quella carta potevi ancora giocarla..."
+          : null
+    );
+    act((g) => resolveDraw(g, mySlot, target, labels));
   };
 
   const copy = async (text: string, kind: "link" | "code") => {
@@ -208,12 +240,9 @@ export function OnlineGame({
   const myDiscardTop = me.discard[me.discard.length - 1];
   const oppDiscardTop = opp.discard[opp.discard.length - 1];
   const opponentName = labels[oppSlot];
-  const canCatch =
-    !!game.pendingMisplay &&
-    game.pendingMisplay.owner !== mySlot &&
-    game.turn === mySlot &&
-    !game.flipped &&
-    !game.gameOver;
+  // Offered on every turn, never only when there is really something to
+  // catch — otherwise the button itself would give the opponent's slip away.
+  const canCatch = game.turn === mySlot && !game.flipped && !game.gameOver;
   const myTurn = game.turn === mySlot;
 
   return (
@@ -269,6 +298,15 @@ export function OnlineGame({
         </div>
       )}
 
+      {selfNote && (
+        <div
+          key={`note-${game.log.length}`}
+          className="animate-toast rounded-xl bg-black/50 border border-amber-300/40 text-amber-100 text-center py-2 text-sm"
+        >
+          {selfNote}
+        </div>
+      )}
+
       {game.gameOver && (
         <div
           className={`rounded-xl p-4 text-center font-semibold ${
@@ -296,9 +334,6 @@ export function OnlineGame({
         stockCount={opp.stock.length}
         discardTop={oppDiscardTop}
         align="start"
-        flaggedCardId={
-          game.pendingMisplay?.owner === oppSlot ? game.pendingMisplay.cardId : undefined
-        }
       />
 
       <div className="rounded-xl bg-black/20 border border-white/10 p-3 sm:p-4">
@@ -329,9 +364,10 @@ export function OnlineGame({
         {canCatch && (
           <button
             onClick={() => act((g) => catchMisplay(g, mySlot, labels))}
-            className="btn-primary animate-pulse"
+            className="btn-option border-amber-400/50 text-amber-200"
+            title={`Se ${opponentName} non ha sbagliato, le 3 carte le prendi tu`}
           >
-            Ti vitti! {opponentName} ha sbagliato
+            Ti vitti!
           </button>
         )}
 
@@ -356,13 +392,12 @@ export function OnlineGame({
               card={game.flipped}
               className="w-20 sm:w-24 animate-flip-in"
             />
+            {/* Always every option: working out which one is right is
+                the game. Showing only the legal ones would hand over the
+                answer and make "Ti vitti!" impossible to trigger. */}
             <div className="flex flex-wrap gap-2 justify-center">
-              {game.options.map((opt) => (
-                <button
-                  key={opt}
-                  onClick={() => act((g) => resolveDraw(g, mySlot, opt, labels))}
-                  className="btn-option"
-                >
+              {PLACEMENT_TARGETS.map((opt) => (
+                <button key={opt} onClick={() => playCard(opt)} className="btn-option">
                   {OPTION_LABEL[opt]}
                 </button>
               ))}

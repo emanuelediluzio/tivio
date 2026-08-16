@@ -45,22 +45,33 @@ export function RulesPanel({
           scartata sulla tua pila: il turno passa all&apos;avversario.
         </li>
         <li>
+          <strong>I tre pulsanti restano sempre disponibili</strong>: sta a te
+          capire dove la carta può andare davvero. Se la piazzi dove non ci
+          sta, non ci arriva — finisce sui tuoi scarti — ed è un errore come
+          gli altri.
+        </li>
+        <li>
           {variant === "cpu" ? (
             <>
-              Attenzione: se scarti una carta quando invece potevi giocarla, il CPU
-              grida &quot;Ti vitti!&quot; e ti penalizza con 3 carte in più. Se invece è il
-              CPU a sbagliare, puoi gridarlo tu cliccando il bottone che appare — le
-              3 carte di penalità passeranno a lui.
+              Il CPU non perdona: ogni tuo errore — carta giocabile scartata
+              oppure piazzata dove non poteva andare — se lo becca subito e ti
+              costa 3 carte di penalità.
             </>
           ) : (
             <>
-              Attenzione: se scarti una carta quando invece potevi giocarla, e{" "}
-              {opponentLabel} se ne accorge per primo, può gridare &quot;Ti vitti!&quot;
-              cliccando il bottone che appare — a te tocca 3 carte di penalità.
-              Vale anche al contrario: se ti accorgi tu di una sua svista, gridalo
-              prima di pescare la tua prossima carta.
+              Nessuno viene penalizzato in automatico: se {opponentLabel}{" "}
+              sbaglia, la penalità scatta solo se te ne accorgi e gridi
+              &quot;Ti vitti!&quot; prima di pescare la tua carta successiva. E
+              vale anche al contrario.
             </>
           )}
+        </li>
+        <li>
+          <strong>Il pulsante &quot;Ti vitti!&quot; è sempre lì</strong>, anche
+          quando non c&apos;è niente da cogliere: nessuno ti avvisa che
+          {variant === "cpu" ? " il CPU " : ` ${opponentLabel} `}
+          ha sbagliato, devi vederlo tu. Ma occhio — se gridi a vuoto, le 3
+          carte di penalità te le prendi tu.
         </li>
         <li>Vince chi esaurisce per primo il proprio mazzo.</li>
       </ul>
