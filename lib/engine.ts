@@ -15,7 +15,7 @@ function other(player: PlayerId): PlayerId {
   return player === "you" ? "cpu" : "you";
 }
 
-export function newGame(): GameState {
+function dealtState(openingLog: string): GameState {
   const deck = shuffle(createDeck());
   const half = Math.ceil(deck.length / 2);
   return {
@@ -28,11 +28,24 @@ export function newGame(): GameState {
     flipped: null,
     options: [],
     pendingMisplay: null,
-    log: ["Nuova partita! Tocca a te: pesca una carta."],
+    log: [openingLog],
     winner: null,
     gameOver: false,
     penaltyFlash: null,
   };
+}
+
+export function newGame(): GameState {
+  return dealtState("Nuova partita! Tocca a te: pesca una carta.");
+}
+
+// Two-slot state, but framed for two human players connected online
+// rather than you-vs-cpu. "you"/"cpu" are reused purely as internal
+// slot keys (host/joiner); labels for display come from `Labels`.
+export type Labels = Record<PlayerId, string>;
+
+export function newOnlineGame(labels: Labels): GameState {
+  return dealtState(`Partita iniziata! Tocca a ${labels.you}.`);
 }
 
 function pushLog(state: GameState, message: string): GameState {
@@ -75,7 +88,8 @@ export function legalOptions(
 function applyPenalty(
   state: GameState,
   caught: PlayerId,
-  catcher: PlayerId
+  catcher: PlayerId,
+  labels?: Labels
 ): GameState {
   const catcherStock = [...state.players[catcher].stock];
   const move = catcherStock.splice(-PENALTY_CARDS, PENALTY_CARDS);
@@ -92,25 +106,31 @@ function applyPenalty(
     players,
     penaltyFlash: { target: caught, amount: move.length },
   };
+  const caughtPhrase = labels
+    ? `${labels[caught]} ha`
+    : caught === "you"
+      ? "Tu hai"
+      : "Il CPU ha";
   next = pushLog(
     next,
-    `Ti vitti! ${caught === "you" ? "Tu hai" : "Il CPU ha"} sbagliato una mossa: ${
-      move.length
-    } cart${move.length === 1 ? "a" : "e"} in penalità.`
+    `Ti vitti! ${caughtPhrase} sbagliato una mossa: ${move.length} cart${
+      move.length === 1 ? "a" : "e"
+    } in penalità.`
   );
-  return checkWinner(next);
+  return checkWinner(next, labels);
 }
 
-export function checkWinner(state: GameState): GameState {
+export function checkWinner(state: GameState, labels?: Labels): GameState {
   if (state.gameOver) return state;
   const youEmpty = state.players.you.stock.length === 0;
   const cpuEmpty = state.players.cpu.stock.length === 0;
   if (!youEmpty && !cpuEmpty) return state;
   const winner: PlayerId = youEmpty ? "you" : "cpu";
-  const msg =
-    winner === "you"
+  const msg = labels
+    ? `${labels[winner]} ha esaurito il mazzo per primo e vince la partita!`
+    : winner === "you"
       ? "Hai esaurito il tuo mazzo per primo. Hai vinto!"
-      : "Il CPU ha esaurito il mazzo per primo. Hai perso."
+      : "Il CPU ha esaurito il mazzo per primo. Hai perso.";
   return pushLog({ ...state, winner, gameOver: true }, msg);
 }
 
@@ -161,7 +181,8 @@ function placeCard(
   state: GameState,
   actor: PlayerId,
   card: CardT,
-  target: PlacementTarget
+  target: PlacementTarget,
+  labels?: Labels
 ): GameState {
   let next = state;
   if (target === "foundation") {
@@ -175,7 +196,10 @@ function placeCard(
       );
     }
     next = { ...next, foundations };
-    next = pushLog(next, `${actorLabel(actor)} gioca ${cardLabel(card)} sulla fondazione.`);
+    next = pushLog(
+      next,
+      `${actorLabel(actor, labels)} gioca ${cardLabel(card)} sulla fondazione.`
+    );
   } else if (target === "opponent") {
     const opp = other(actor);
     const oppDiscard = [...next.players[opp].discard, card];
@@ -185,7 +209,10 @@ function placeCard(
     };
     next = pushLog(
       next,
-      `${actorLabel(actor)} scarica ${cardLabel(card)} sulla pila di ${actorLabel(opp)}.`
+      `${actorLabel(actor, labels)} scarica ${cardLabel(card)} sulla pila di ${actorLabel(
+        opp,
+        labels
+      )}.`
     );
   } else {
     const discard = [...next.players[actor].discard, card];
@@ -193,9 +220,9 @@ function placeCard(
       ...next,
       players: { ...next.players, [actor]: { ...next.players[actor], discard } },
     };
-    next = pushLog(next, `${actorLabel(actor)} scarta ${cardLabel(card)}.`);
+    next = pushLog(next, `${actorLabel(actor, labels)} scarta ${cardLabel(card)}.`);
   }
-  return checkWinner(next);
+  return checkWinner(next, labels);
 }
 
 export function callTiVitti(state: GameState): GameState {
@@ -209,6 +236,62 @@ export function callTiVitti(state: GameState): GameState {
 
 export function clearPenaltyFlash(state: GameState): GameState {
   return state.penaltyFlash ? { ...state, penaltyFlash: null } : state;
+}
+
+// ---- Generic two-human turn (online play) ----
+
+export function drawCard(state: GameState, actor: PlayerId, labels: Labels): GameState {
+  if (state.gameOver || state.turn !== actor || state.flipped) return state;
+  let base = state;
+  if (base.pendingMisplay && base.pendingMisplay.owner !== actor) {
+    base = pushLog(
+      { ...base, pendingMisplay: null },
+      "Occasione persa per gridare Ti vitti!"
+    );
+  }
+  const stock = [...base.players[actor].stock];
+  const card = stock.pop();
+  if (!card) return base;
+  const players = { ...base.players, [actor]: { ...base.players[actor], stock } };
+  const opponent = other(actor);
+  const opponentTop = base.players[opponent].discard[base.players[opponent].discard.length - 1];
+  const options = legalOptions(card, base.foundations, opponentTop);
+  let next: GameState = { ...base, players, flipped: card, options };
+  next = pushLog(next, `${actorLabel(actor, labels)} gira: ${cardLabel(card)}.`);
+  return next;
+}
+
+export function resolveDraw(
+  state: GameState,
+  actor: PlayerId,
+  target: PlacementTarget,
+  labels: Labels
+): GameState {
+  if (state.gameOver || state.turn !== actor || !state.flipped) return state;
+  const card = state.flipped;
+  const hadBetter = state.options.includes("foundation") || state.options.includes("opponent");
+
+  let next = placeCard(state, actor, card, target, labels);
+  next = { ...next, flipped: null, options: [] };
+
+  if (target === "discard") {
+    next = { ...next, turn: other(actor) };
+    if (hadBetter && !next.gameOver) {
+      next = { ...next, pendingMisplay: { owner: actor, cardId: card.id } };
+    }
+  }
+  // otherwise: bonus flip, actor keeps the turn
+  return next;
+}
+
+export function catchMisplay(state: GameState, caller: PlayerId, labels: Labels): GameState {
+  if (state.gameOver || !state.pendingMisplay || state.pendingMisplay.owner === caller) {
+    return state;
+  }
+  const caught = state.pendingMisplay.owner;
+  let next: GameState = { ...state, pendingMisplay: null };
+  next = applyPenalty(next, caught, caller, labels);
+  return next;
 }
 
 // ---- CPU turn: advance exactly one flip ----
@@ -257,7 +340,8 @@ export function cpuStep(state: GameState): GameState {
   return next;
 }
 
-function actorLabel(p: PlayerId) {
+function actorLabel(p: PlayerId, labels?: Labels) {
+  if (labels) return labels[p];
   return p === "you" ? "Tu" : "Il CPU";
 }
 

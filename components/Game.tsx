@@ -10,8 +10,9 @@ import {
   placeFlipped,
 } from "@/lib/engine";
 import { GameState, PlacementTarget, RANK_LABELS, SUIT_LABELS } from "@/lib/types";
-import { CardBack, EmptySlot, PlayingCard } from "./PlayingCard";
-import { SuitIcon } from "./SuitIcon";
+import { EmptySlot, PlayingCard } from "./PlayingCard";
+import { PlayerZone } from "./PlayerZone";
+import { RulesPanel } from "./RulesPanel";
 
 const OPTION_LABEL: Record<PlacementTarget, string> = {
   foundation: "Gioca sulla fondazione",
@@ -19,7 +20,7 @@ const OPTION_LABEL: Record<PlacementTarget, string> = {
   discard: "Scarta sulla tua pila",
 };
 
-export function Game() {
+export function Game({ onExit }: { onExit?: () => void }) {
   const [game, setGame] = useState<GameState>(() => newGame());
   const [showRules, setShowRules] = useState(false);
   const cpuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,6 +67,11 @@ export function Game() {
           </p>
         </div>
         <div className="flex gap-2">
+          {onExit && (
+            <button onClick={onExit} className="btn-ghost">
+              Menu
+            </button>
+          )}
           <button
             onClick={() => setShowRules((s) => !s)}
             className="btn-ghost"
@@ -212,105 +218,6 @@ export function Game() {
           <div key={i}>{line}</div>
         ))}
         <div ref={logEndRef} />
-      </div>
-    </div>
-  );
-}
-
-function PlayerZone({
-  name,
-  stockCount,
-  discardTop,
-  align,
-  flaggedCardId,
-}: {
-  name: string;
-  stockCount: number;
-  discardTop: import("@/lib/types").CardT | undefined;
-  align: "start" | "end";
-  flaggedCardId?: string;
-}) {
-  return (
-    <div
-      className={`flex items-center gap-4 ${
-        align === "end" ? "flex-row-reverse" : ""
-      }`}
-    >
-      <div className="flex flex-col items-center gap-1 w-14 sm:w-16 md:w-20">
-        {stockCount > 0 ? (
-          <CardBack className="w-14 sm:w-16 md:w-20" />
-        ) : (
-          <EmptySlot className="w-14 sm:w-16 md:w-20" />
-        )}
-        <span className="text-[10px] text-amber-100/60">{stockCount} carte</span>
-      </div>
-      <div className="flex flex-col items-center gap-1 w-14 sm:w-16 md:w-20">
-        {discardTop ? (
-          <PlayingCard
-            card={discardTop}
-            className="w-14 sm:w-16 md:w-20"
-            highlight={flaggedCardId === discardTop.id}
-          />
-        ) : (
-          <EmptySlot className="w-14 sm:w-16 md:w-20" />
-        )}
-        <span className="text-[10px] text-amber-100/60">pila</span>
-      </div>
-      <div className="text-sm font-semibold text-amber-100/80">{name}</div>
-    </div>
-  );
-}
-
-function RulesPanel({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="rounded-xl bg-black/40 border border-white/15 p-4 text-sm leading-relaxed space-y-2">
-      <div className="flex items-center justify-between">
-        <h2 className="font-bold text-base">Come si gioca</h2>
-        <button onClick={onClose} className="text-amber-100/60 hover:text-amber-100">
-          Chiudi
-        </button>
-      </div>
-      <p>
-        <strong>Ti Vitti</strong> (&quot;ti ho visto&quot;) è un tradizionale gioco di carte
-        siciliano e calabrese, giocato con un mazzo da 40 carte. In questa versione
-        digitale affronti il CPU seguendo un adattamento fedele delle regole
-        classiche.
-      </p>
-      <ul className="list-disc pl-5 space-y-1">
-        <li>
-          Il mazzo viene diviso a metà, a faccia in giù, tra te e il CPU. Non
-          conosci le tue carte finché non le giri.
-        </li>
-        <li>
-          Al tuo turno peschi la carta in cima al tuo mazzo. Se è un <strong>Asso</strong>,
-          apri una nuova fondazione al centro e peschi di nuovo.
-        </li>
-        <li>
-          Se la carta continua una fondazione dello stesso seme (es. un 5 di Denari
-          su un 4 di Denari), puoi giocarla lì e pescare ancora.
-        </li>
-        <li>
-          Se la carta è di un valore adiacente (+1 o −1) alla carta in cima alla
-          pila di scarti dell&apos;avversario, puoi scaricarla lì e pescare ancora.
-        </li>
-        <li>
-          Se non puoi fare nessuna di queste mosse, la carta è &quot;morta&quot; e va
-          scartata sulla tua pila: il turno passa all&apos;avversario.
-        </li>
-        <li>
-          Attenzione: se scarti una carta quando invece potevi giocarla, il CPU
-          grida &quot;Ti vitti!&quot; e ti penalizza con 3 carte in più. Se invece è il
-          CPU a sbagliare, puoi gridarlo tu cliccando il bottone che appare — le
-          3 carte di penalità passeranno a lui.
-        </li>
-        <li>Vince chi esaurisce per primo il proprio mazzo.</li>
-      </ul>
-      <div className="flex items-center gap-2 pt-1 text-amber-100/60 text-xs">
-        <SuitIcon suit="denari" className="w-4 h-4" />
-        <SuitIcon suit="coppe" className="w-4 h-4" />
-        <SuitIcon suit="spade" className="w-4 h-4" />
-        <SuitIcon suit="bastoni" className="w-4 h-4" />
-        <span>Denari, Coppe, Spade, Bastoni — Fante=8, Cavallo=9, Re=10.</span>
       </div>
     </div>
   );

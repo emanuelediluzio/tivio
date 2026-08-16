@@ -1,8 +1,9 @@
 # Ti Vitti 🃏
 
 Una versione digitale di **Ti Vitti** ("ti ho visto"), il tradizionale gioco di
-carte siciliano e calabrese, giocata contro il CPU. Costruita con Next.js (App
-Router), TypeScript e Tailwind CSS.
+carte siciliano e calabrese. Si gioca contro il CPU oppure online con un amico
+tramite un link/codice condiviso. Costruita con Next.js (App Router),
+TypeScript e Tailwind CSS.
 
 Fonte delle regole originali: [Ti vitti – Wikipedia](https://it.wikipedia.org/wiki/Ti_vitti).
 
@@ -25,7 +26,24 @@ faccia in giù, tra te e il CPU.
 - Vince chi esaurisce per primo il proprio mazzo.
 
 Le regole complete sono consultabili anche dentro l'app tramite il pulsante
-**Regole**.
+**Regole**. In modalità online nessuno viene penalizzato in automatico: se
+sbagli una mossa tocca all'avversario accorgersene e gridare "Ti vitti!"
+entro il proprio turno successivo (e vale anche il contrario).
+
+## Modalità online
+
+La modalità "Gioca online con un amico" collega due browser via WebRTC
+(libreria [PeerJS](https://peerjs.com/), usando il suo broker cloud gratuito
+solo per l'handshake iniziale — i dati della partita viaggiano poi
+direttamente tra i due browser, senza passare da un backend). Chi crea la
+stanza ottiene un codice a 5 caratteri e un link da condividere; l'altro
+giocatore inserisce il codice o apre direttamente il link.
+
+Essendo una connessione peer-to-peer diretta, funziona bene sulla maggior
+parte delle reti domestiche/mobili ma può occasionalmente non riuscire a
+stabilirsi su reti aziendali molto restrittive (senza un server TURN di
+fallback). Se la stanza resta bloccata su "connessione in corso" per molto
+tempo, è probabile che sia questo il caso.
 
 ## Sviluppo
 
