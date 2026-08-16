@@ -58,6 +58,16 @@ export function useRoomConnection(onMessage: (data: unknown) => void): UseRoomCo
 
   useEffect(() => cleanup, [cleanup]);
 
+  // WebRTC only notices an abrupt tab close once the ICE connection times
+  // out, which can take a long while (or never fire cleanly at all). Say
+  // goodbye explicitly on the way out so the other side finds out in time
+  // to actually matter, instead of staring at a frozen board.
+  useEffect(() => {
+    const sayGoodbye = () => connRef.current?.close();
+    window.addEventListener("pagehide", sayGoodbye);
+    return () => window.removeEventListener("pagehide", sayGoodbye);
+  }, []);
+
   const wireConnection = useCallback((conn: DataConnection) => {
     connRef.current = conn;
     conn.on("open", () => setStatus("connected"));

@@ -134,6 +134,14 @@ export function OnlineGame({
     act((g) => resolveDraw(g, mySlot, target, labels));
   };
 
+  const restart = () => {
+    if (!labels) return;
+    setSelfNote(null);
+    const fresh = newOnlineGame(labels);
+    setGame(fresh);
+    send({ kind: "state", state: fresh });
+  };
+
   const copy = async (text: string, kind: "link" | "code") => {
     try {
       await navigator.clipboard.writeText(text);
@@ -217,6 +225,12 @@ export function OnlineGame({
                 onChange={(e) => setJoinInput(e.target.value.toUpperCase())}
                 maxLength={5}
                 placeholder="ABCDE"
+                aria-label="Codice della stanza"
+                inputMode="text"
+                autoCapitalize="characters"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
                 className="rounded-lg bg-black/30 border border-white/20 px-3 py-2 text-center tracking-[0.3em] text-lg uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               />
               <button
@@ -256,14 +270,7 @@ export function OnlineGame({
           <button onClick={() => setShowRules((s) => !s)} className="btn-ghost">
             Regole
           </button>
-          <button
-            onClick={() => {
-              const fresh = newOnlineGame(labels);
-              setGame(fresh);
-              send({ kind: "state", state: fresh });
-            }}
-            className="btn-ghost"
-          >
+          <button onClick={restart} className="btn-ghost">
             Nuova partita
           </button>
           <button
@@ -318,11 +325,7 @@ export function OnlineGame({
           {game.winner === mySlot ? "Hai vinto! 🎉" : `Ha vinto ${opponentName}.`} —{" "}
           <button
             className="underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 rounded"
-            onClick={() => {
-              const fresh = newOnlineGame(labels);
-              setGame(fresh);
-              send({ kind: "state", state: fresh });
-            }}
+            onClick={restart}
           >
             gioca ancora
           </button>

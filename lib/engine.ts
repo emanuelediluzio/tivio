@@ -16,7 +16,7 @@ function other(player: PlayerId): PlayerId {
   return player === "you" ? "cpu" : "you";
 }
 
-function dealtState(openingLog: string): GameState {
+function dealtState(openingLog: string, turn: PlayerId = "you"): GameState {
   const deck = shuffle(createDeck());
   const half = Math.ceil(deck.length / 2);
   return {
@@ -25,7 +25,7 @@ function dealtState(openingLog: string): GameState {
       cpu: { stock: deck.slice(half), discard: [] },
     },
     foundations: [],
-    turn: "you",
+    turn,
     flipped: null,
     playable: [],
     pendingMisplay: null,
@@ -46,7 +46,12 @@ export function newGame(): GameState {
 export type Labels = Record<PlayerId, string>;
 
 export function newOnlineGame(labels: Labels): GameState {
-  return dealtState(`Partita iniziata! Tocca a ${labels.you}.`);
+  // Whoever restarts the game would otherwise always hand themselves the
+  // first move (the host is always "you"). This state gets broadcast to
+  // the other peer verbatim, so picking randomly here still lands both
+  // sides on the same starter — no coordination needed.
+  const starter: PlayerId = Math.random() < 0.5 ? "you" : "cpu";
+  return dealtState(`Partita iniziata! Tocca a ${labels[starter]}.`, starter);
 }
 
 function pushLog(state: GameState, message: string): GameState {
