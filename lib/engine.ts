@@ -136,11 +136,22 @@ function applyPenalty(
 ): GameState {
   const catcherStock = [...state.players[catcher].stock];
   const move = catcherStock.splice(-PENALTY_CARDS, PENALTY_CARDS);
+  // The stock alone might come up short (a card sitting on the catcher's
+  // own pile is still theirs to lose) — top up from there before settling
+  // for fewer than 3.
+  let catcherDiscard = state.players[catcher].discard;
+  const shortfall = PENALTY_CARDS - move.length;
+  if (shortfall > 0 && catcherDiscard.length > 0) {
+    const remainingDiscard = [...catcherDiscard];
+    const fromDiscard = remainingDiscard.splice(-shortfall, shortfall);
+    catcherDiscard = remainingDiscard;
+    move.push(...fromDiscard);
+  }
   const caughtStock = [move.reverse(), state.players[caught].stock].flat();
 
   const players = {
     ...state.players,
-    [catcher]: { ...state.players[catcher], stock: catcherStock },
+    [catcher]: { ...state.players[catcher], stock: catcherStock, discard: catcherDiscard },
     [caught]: { ...state.players[caught], stock: caughtStock },
   };
 
@@ -164,18 +175,53 @@ function applyPenalty(
   return checkWinner(next, labels);
 }
 
+// A player is done only once EVERY card they ever held is gone — the draw
+// pile and their own discard pile both empty. Running out of stock alone
+// means nothing while cards are still sitting on their pile: those come
+// back around (see drawFrom) until they too land on a foundation or on the
+// opponent's pile.
+function isPlayerDone(state: GameState, player: PlayerId): boolean {
+  const p = state.players[player];
+  return p.stock.length === 0 && p.discard.length === 0;
+}
+
 export function checkWinner(state: GameState, labels?: Labels): GameState {
   if (state.gameOver) return state;
-  const youEmpty = state.players.you.stock.length === 0;
-  const cpuEmpty = state.players.cpu.stock.length === 0;
-  if (!youEmpty && !cpuEmpty) return state;
-  const winner: PlayerId = youEmpty ? "you" : "cpu";
+  const youDone = isPlayerDone(state, "you");
+  const cpuDone = isPlayerDone(state, "cpu");
+  if (!youDone && !cpuDone) return state;
+  const winner: PlayerId = youDone ? "you" : "cpu";
   const msg = labels
-    ? `${labels[winner]} ha esaurito il mazzo per primo e vince la partita!`
+    ? `${labels[winner]} ha piazzato tutte le sue carte per primo e vince la partita!`
     : winner === "you"
-      ? "Hai esaurito il tuo mazzo per primo. Hai vinto!"
-      : "Il CPU ha esaurito il mazzo per primo. Hai perso.";
+      ? "Hai piazzato tutte le tue carte per primo. Hai vinto!"
+      : "Il CPU ha piazzato tutte le sue carte per primo. Hai perso.";
   return pushLog({ ...state, winner, gameOver: true }, msg);
+}
+
+/**
+ * Draw the next card for `actor`. When the stock runs dry but their own
+ * pile still has cards on it, the pile is turned over as a whole (no
+ * reshuffle — same relative order, just flipped) and becomes the new
+ * stock, so nothing is truly gone until it's been placed on a foundation
+ * or handed to the opponent.
+ */
+function drawFrom(
+  state: GameState,
+  actor: PlayerId
+): { state: GameState; card: CardT | undefined; reshuffled: boolean } {
+  const current = state.players[actor];
+  let stock = [...current.stock];
+  let discard = current.discard;
+  let reshuffled = false;
+  if (stock.length === 0 && discard.length > 0) {
+    stock = [...discard].reverse();
+    discard = [];
+    reshuffled = true;
+  }
+  const card = stock.pop();
+  const players = { ...state.players, [actor]: { ...current, stock, discard } };
+  return { state: { ...state, players }, card, reshuffled };
 }
 
 // ---- Human turn ----
@@ -186,13 +232,16 @@ export function flipOwn(state: GameState): GameState {
   if (base.pendingMisplay && base.pendingMisplay.owner === "cpu") {
     base = pushLog({ ...base, pendingMisplay: null }, "Occasione persa per gridare Ti vitti!");
   }
-  const stock = [...base.players.you.stock];
-  const card = stock.pop();
-  if (!card) return base;
-  const players = { ...base.players, you: { ...base.players.you, stock } };
+  const drawn = drawFrom(base, "you");
+  if (!drawn.card) return base;
+  base = drawn.state;
+  if (drawn.reshuffled) {
+    base = pushLog(base, "Il mazzo è finito: rigiri la tua pila e torna a essere mazzo.");
+  }
+  const card = drawn.card;
   const opponentTop = base.players.cpu.discard[base.players.cpu.discard.length - 1];
   const playable = playableTargets(card, base.foundations, opponentTop);
-  let next: GameState = { ...base, players, flipped: card, playable };
+  let next: GameState = { ...base, flipped: card, playable };
   next = pushLog(next, `Hai girato: ${cardLabel(card)}.`);
   return next;
 }
@@ -403,14 +452,17 @@ export function drawCard(state: GameState, actor: PlayerId, labels: Labels): Gam
       "Occasione persa per gridare Ti vitti!"
     );
   }
-  const stock = [...base.players[actor].stock];
-  const card = stock.pop();
-  if (!card) return base;
-  const players = { ...base.players, [actor]: { ...base.players[actor], stock } };
+  const drawn = drawFrom(base, actor);
+  if (!drawn.card) return base;
+  base = drawn.state;
+  if (drawn.reshuffled) {
+    base = pushLog(base, `${actorLabel(actor, labels)} rigira la pila: il mazzo torna pieno.`);
+  }
+  const card = drawn.card;
   const opponent = other(actor);
   const opponentTop = base.players[opponent].discard[base.players[opponent].discard.length - 1];
   const playable = playableTargets(card, base.foundations, opponentTop);
-  let next: GameState = { ...base, players, flipped: card, playable };
+  let next: GameState = { ...base, flipped: card, playable };
   next = pushLog(next, `${actorLabel(actor, labels)} gira: ${cardLabel(card)}.`);
   return next;
 }
@@ -475,19 +527,18 @@ export function cpuStep(state: GameState): GameState {
     }
   }
 
-  const stock = [...state.players.cpu.stock];
-  const card = stock.pop();
-  if (!card) return state;
+  const drawn = drawFrom(state, "cpu");
+  if (!drawn.card) return state;
+  let next: GameState = drawn.state;
+  if (drawn.reshuffled) {
+    next = pushLog(next, "Il CPU rigira la pila: il mazzo torna pieno.");
+  }
+  const card = drawn.card;
 
-  const youTop = state.players.you.discard[state.players.you.discard.length - 1];
-  const playable = playableTargets(card, state.foundations, youTop);
+  const youTop = next.players.you.discard[next.players.you.discard.length - 1];
+  const playable = playableTargets(card, next.foundations, youTop);
 
-  let next: GameState = {
-    ...state,
-    players: { ...state.players, cpu: { ...state.players.cpu, stock } },
-    flipped: card,
-    playable,
-  };
+  next = { ...next, flipped: card, playable };
   next = pushLog(next, `Il CPU gira: ${cardLabel(card)}.`);
 
   // The CPU is careless now and then, in either direction: overlooking a

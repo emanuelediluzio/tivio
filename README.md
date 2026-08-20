@@ -30,7 +30,13 @@ una fondazione o sulla pila dell'avversario, con le stesse regole della carta
 appena girata. Una mossa buona è un bonus e il turno continua; una mossa
 sbagliata è un errore come un altro.
 
-Vince chi esaurisce per primo il proprio mazzo.
+Quando il mazzo finisce ma la tua pila ha ancora carte, **la giri tutta
+com'è** (nessun rimescolamento: il pacchetto viene semplicemente capovolto)
+e ridiventa il tuo mazzo da pescare. Si va avanti così finché quella pila
+non resta vuota per davvero.
+
+Vince chi esaurisce per primo **tutte** le proprie carte — mazzo e pila,
+entrambi a zero.
 
 ### Niente aiutini
 

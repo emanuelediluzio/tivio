@@ -182,11 +182,11 @@ export function Game({ onExit }: { onExit?: () => void }) {
         {!game.gameOver && game.turn === "you" && !game.flipped && (
           <div className="flex flex-col items-center gap-3">
             <button
-              disabled={you.stock.length === 0}
+              disabled={you.stock.length === 0 && you.discard.length === 0}
               onClick={() => setGame((g) => flipOwn(g))}
               className="btn-primary"
             >
-              Pesca una carta
+              {you.stock.length === 0 ? "Rigira la pila e pesca" : "Pesca una carta"}
             </button>
             {/* The top of your own pile stays live too: same self-judged
                 always-on buttons as the flipped card, minus discard (it's

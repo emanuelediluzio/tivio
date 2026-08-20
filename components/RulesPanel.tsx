@@ -51,6 +51,12 @@ export function RulesPanel({
           dell&apos;avversario, spostala lì e continua il turno.
         </li>
         <li>
+          <strong>Quando finisce il mazzo, non è finita</strong>: se hai
+          ancora carte sulla tua pila, la giri tutta com&apos;è (senza
+          rimescolare) e torna a essere il tuo mazzo da pescare. Si continua
+          così finché quella pila non si svuota per davvero.
+        </li>
+        <li>
           <strong>I tre pulsanti restano sempre disponibili</strong>: sta a te
           capire dove la carta può andare davvero. Se la piazzi dove non ci
           sta, non ci arriva — finisce sui tuoi scarti — ed è un errore come
@@ -79,7 +85,10 @@ export function RulesPanel({
           ha sbagliato, devi vederlo tu. Ma occhio — se gridi a vuoto, le 3
           carte di penalità te le prendi tu.
         </li>
-        <li>Vince chi esaurisce per primo il proprio mazzo.</li>
+        <li>
+          Vince chi esaurisce per primo <strong>tutte</strong> le proprie
+          carte — mazzo e pila, entrambi a zero.
+        </li>
       </ul>
       <div className="flex items-center gap-2 pt-1 text-amber-100/60 text-xs">
         <SuitIcon suit="denari" className="w-4 h-4" />

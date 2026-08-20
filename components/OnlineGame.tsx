@@ -403,11 +403,11 @@ export function OnlineGame({
         {!game.gameOver && myTurn && !game.flipped && (
           <div className="flex flex-col items-center gap-3">
             <button
-              disabled={me.stock.length === 0}
+              disabled={me.stock.length === 0 && me.discard.length === 0}
               onClick={() => act((g) => drawCard(g, mySlot, labels))}
               className="btn-primary"
             >
-              Pesca una carta
+              {me.stock.length === 0 ? "Rigira la pila e pesca" : "Pesca una carta"}
             </button>
             {myDiscardTop && (
               <div className="flex flex-wrap gap-2 justify-center">
