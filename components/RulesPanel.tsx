@@ -45,6 +45,12 @@ export function RulesPanel({
           scartata sulla tua pila: il turno passa all&apos;avversario.
         </li>
         <li>
+          <strong>La cima della tua pila resta viva</strong>: quando ti serve
+          puoi anche giocarla, non solo la carta appena girata. Se combacia
+          con una fondazione o è adiacente alla cima della pila
+          dell&apos;avversario, spostala lì e continua il turno.
+        </li>
+        <li>
           <strong>I tre pulsanti restano sempre disponibili</strong>: sta a te
           capire dove la carta può andare davvero. Se la piazzi dove non ci
           sta, non ci arriva — finisce sui tuoi scarti — ed è un errore come

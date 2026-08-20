@@ -4,6 +4,7 @@ import {
   FoundationPile,
   GameState,
   MisplayReason,
+  PilePlayTarget,
   PlacementTarget,
   PlayerId,
 } from "./types";
@@ -246,7 +247,8 @@ function placeCard(
   actor: PlayerId,
   card: CardT,
   target: PlacementTarget,
-  labels?: Labels
+  labels?: Labels,
+  fromPile = false
 ): GameState {
   let next = state;
   let message: string;
@@ -262,7 +264,9 @@ function placeCard(
       );
     }
     next = { ...next, foundations };
-    message = `${actorLabel(actor, labels)} gioca ${cardLabel(card)} sulla fondazione.`;
+    message = fromPile
+      ? `${actorLabel(actor, labels)} gioca ${cardLabel(card)} dalla propria pila sulla fondazione.`
+      : `${actorLabel(actor, labels)} gioca ${cardLabel(card)} sulla fondazione.`;
   } else if (target === "opponent") {
     const opp = other(actor);
     const oppDiscard = [...next.players[opp].discard, card];
@@ -270,9 +274,11 @@ function placeCard(
       ...next,
       players: { ...next.players, [opp]: { ...next.players[opp], discard: oppDiscard } },
     };
-    message = `${actorLabel(actor, labels)} scarica ${cardLabel(
-      card
-    )} sulla pila di ${actorLabel(opp, labels)}.`;
+    message = fromPile
+      ? `${actorLabel(actor, labels)} passa ${cardLabel(card)} dalla propria pila a quella di ${actorLabel(opp, labels)}.`
+      : `${actorLabel(actor, labels)} scarica ${cardLabel(
+          card
+        )} sulla pila di ${actorLabel(opp, labels)}.`;
   } else {
     const discard = [...next.players[actor].discard, card];
     next = {
@@ -284,6 +290,86 @@ function placeCard(
 
   next = pushLog(next, message);
   return checkWinner(next, labels);
+}
+
+function pileTop(state: GameState, actor: PlayerId): CardT | undefined {
+  const pile = state.players[actor].discard;
+  return pile[pile.length - 1];
+}
+
+/**
+ * The top card of your own discard pile is never "stuck" — it stays a live
+ * candidate for the foundations or the opponent's pile, exactly like a
+ * freshly-flipped card, just without a "discard" fallback (it's already
+ * there). An illegal attempt leaves it exactly where it was; only a legal
+ * one actually moves it.
+ */
+function applyPilePlacement(
+  state: GameState,
+  actor: PlayerId,
+  target: PilePlayTarget,
+  labels?: Labels
+): { next: GameState; verdict: { ok: boolean; reason: MisplayReason | null } } {
+  const card = pileTop(state, actor);
+  if (!card) return { next: state, verdict: { ok: true, reason: null } };
+
+  const opponent = other(actor);
+  const opponentTop = pileTop(state, opponent);
+  const playable = playableTargets(card, state.foundations, opponentTop);
+  if (!playable.includes(target)) {
+    return { next: state, verdict: { ok: false, reason: "illegal" } };
+  }
+
+  const trimmedDiscard = state.players[actor].discard.slice(0, -1);
+  const withCardRemoved: GameState = {
+    ...state,
+    players: {
+      ...state.players,
+      [actor]: { ...state.players[actor], discard: trimmedDiscard },
+    },
+  };
+  const next = placeCard(withCardRemoved, actor, card, target, labels, true);
+  return { next, verdict: { ok: true, reason: null } };
+}
+
+/** Vs-CPU counterpart of {@link resolvePile}: the CPU never misses a slip,
+ *  so a bad attempt is punished on the spot. */
+export function playPile(state: GameState, target: PilePlayTarget): GameState {
+  if (state.gameOver || state.turn !== "you" || state.flipped) return state;
+  if (!pileTop(state, "you")) return state;
+
+  const { next, verdict } = applyPilePlacement(state, "you", target);
+  if (!verdict.ok) {
+    const penalized = applyPenalty(next, "you", "cpu", verdict.reason!);
+    if (penalized.gameOver) return penalized;
+    return { ...penalized, turn: "cpu" };
+  }
+  // A good placement is a bonus move — the turn continues.
+  return next;
+}
+
+/** Online counterpart of {@link playPile}: same self-judged always-on
+ *  buttons, but a bad attempt only gets flagged via pendingMisplay, to be
+ *  caught (or not) by the opponent before their own next draw. */
+export function resolvePile(
+  state: GameState,
+  actor: PlayerId,
+  target: PilePlayTarget,
+  labels: Labels
+): GameState {
+  if (state.gameOver || state.turn !== actor || state.flipped) return state;
+  const card = pileTop(state, actor);
+  if (!card) return state;
+
+  const { next, verdict } = applyPilePlacement(state, actor, target, labels);
+  if (!verdict.ok) {
+    return {
+      ...next,
+      turn: other(actor),
+      pendingMisplay: { owner: actor, cardId: card.id, reason: verdict.reason! },
+    };
+  }
+  return next;
 }
 
 /**
@@ -376,6 +462,19 @@ export function catchMisplay(state: GameState, caller: PlayerId, labels: Labels)
 
 export function cpuStep(state: GameState): GameState {
   if (state.gameOver || state.turn !== "cpu" || state.flipped) return state;
+
+  // Before drawing, the CPU checks whether its own pile's top card is
+  // still live and, if so, plays it — same bonus a human player can take.
+  const cpuPileTop = pileTop(state, "cpu");
+  if (cpuPileTop) {
+    const youTop = pileTop(state, "you");
+    const pilePlayable = playableTargets(cpuPileTop, state.foundations, youTop);
+    if (pilePlayable.length > 0) {
+      const { next } = applyPilePlacement(state, "cpu", pilePlayable[0] as PilePlayTarget);
+      return next;
+    }
+  }
+
   const stock = [...state.players.cpu.stock];
   const card = stock.pop();
   if (!card) return state;

@@ -8,10 +8,13 @@ import {
   flipOwn,
   newGame,
   placeFlipped,
+  playPile,
 } from "@/lib/engine";
 import {
   GameState,
+  PILE_PLAY_TARGETS,
   PLACEMENT_TARGETS,
+  PilePlayTarget,
   PlacementTarget,
   RANK_LABELS,
   SUIT_LABELS,
@@ -24,6 +27,11 @@ const OPTION_LABEL: Record<PlacementTarget, string> = {
   foundation: "Gioca sulla fondazione",
   opponent: "Scarica sul CPU",
   discard: "Scarta sulla tua pila",
+};
+
+const PILE_OPTION_LABEL: Record<PilePlayTarget, string> = {
+  foundation: "Gioca la cima della pila sulla fondazione",
+  opponent: "Gioca la cima della pila sul CPU",
 };
 
 export function Game({ onExit }: { onExit?: () => void }) {
@@ -172,13 +180,31 @@ export function Game({ onExit }: { onExit?: () => void }) {
         )}
 
         {!game.gameOver && game.turn === "you" && !game.flipped && (
-          <button
-            disabled={you.stock.length === 0}
-            onClick={() => setGame((g) => flipOwn(g))}
-            className="btn-primary"
-          >
-            Pesca una carta
-          </button>
+          <div className="flex flex-col items-center gap-3">
+            <button
+              disabled={you.stock.length === 0}
+              onClick={() => setGame((g) => flipOwn(g))}
+              className="btn-primary"
+            >
+              Pesca una carta
+            </button>
+            {/* The top of your own pile stays live too: same self-judged
+                always-on buttons as the flipped card, minus discard (it's
+                already there). */}
+            {youDiscardTop && (
+              <div className="flex flex-wrap gap-2 justify-center">
+                {PILE_PLAY_TARGETS.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setGame((g) => playPile(g, opt))}
+                    className="btn-option"
+                  >
+                    {PILE_OPTION_LABEL[opt]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {!game.gameOver && game.flipped && (

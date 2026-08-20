@@ -48,6 +48,13 @@ export const PLACEMENT_TARGETS: PlacementTarget[] = [
   "discard",
 ];
 
+// The top card of your own discard pile is also always live — same two
+// destinations as a freshly-flipped card, minus "discard" (it's already
+// there).
+export type PilePlayTarget = "foundation" | "opponent";
+
+export const PILE_PLAY_TARGETS: PilePlayTarget[] = ["foundation", "opponent"];
+
 // Why someone is taking penalty cards:
 // - "missed": the card was playable, but it got discarded anyway.
 // - "illegal": it was played somewhere it could not legally go.

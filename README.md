@@ -24,6 +24,12 @@ faccia in giù, tra te e l'avversario.
 | La carta è adiacente (+1/−1) alla cima della pila dell'avversario | Si scarica lì, e peschi di nuovo |
 | Nessuna di queste è possibile | La carta è "morta": va sulla tua pila, il turno passa |
 
+La cima della tua pila di scarti **resta sempre viva**: in qualsiasi momento
+del tuo turno (non solo appena dopo aver pescato) puoi provare a spostarla su
+una fondazione o sulla pila dell'avversario, con le stesse regole della carta
+appena girata. Una mossa buona è un bonus e il turno continua; una mossa
+sbagliata è un errore come un altro.
+
 Vince chi esaurisce per primo il proprio mazzo.
 
 ### Niente aiutini

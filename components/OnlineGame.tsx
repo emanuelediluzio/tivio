@@ -8,12 +8,16 @@ import {
   judgeMove,
   Labels,
   newOnlineGame,
+  playableTargets,
   resolveDraw,
+  resolvePile,
 } from "@/lib/engine";
 import { useRoomConnection } from "@/lib/net";
 import {
   GameState,
+  PILE_PLAY_TARGETS,
   PLACEMENT_TARGETS,
+  PilePlayTarget,
   PlacementTarget,
   PlayerId,
   RANK_LABELS,
@@ -31,6 +35,11 @@ const OPTION_LABEL: Record<PlacementTarget, string> = {
   foundation: "Gioca sulla fondazione",
   opponent: "Scarica sull'avversario",
   discard: "Scarta sulla tua pila",
+};
+
+const PILE_OPTION_LABEL: Record<PilePlayTarget, string> = {
+  foundation: "Gioca la cima della pila sulla fondazione",
+  opponent: "Gioca la cima della pila sull'avversario",
 };
 
 export function OnlineGame({
@@ -132,6 +141,23 @@ export function OnlineGame({
           : null
     );
     act((g) => resolveDraw(g, mySlot, target, labels));
+  };
+
+  // Your own pile's top card is also always live — same self-judged
+  // always-on buttons as the flipped card, just aimed at foundations or
+  // the opponent's pile.
+  const playPileCard = (target: PilePlayTarget) => {
+    if (!game || !mySlot || !labels) return;
+    const oppSlot: PlayerId = mySlot === "you" ? "cpu" : "you";
+    const card = game.players[mySlot].discard[game.players[mySlot].discard.length - 1];
+    if (!card) return;
+    const opponentTop =
+      game.players[oppSlot].discard[game.players[oppSlot].discard.length - 1];
+    const ok = playableTargets(card, game.foundations, opponentTop).includes(target);
+    setSelfNote(
+      ok ? null : "Quella carta lì non ci poteva andare: resta sulla tua pila."
+    );
+    act((g) => resolvePile(g, mySlot, target, labels));
   };
 
   const restart = () => {
@@ -375,13 +401,28 @@ export function OnlineGame({
         )}
 
         {!game.gameOver && myTurn && !game.flipped && (
-          <button
-            disabled={me.stock.length === 0}
-            onClick={() => act((g) => drawCard(g, mySlot, labels))}
-            className="btn-primary"
-          >
-            Pesca una carta
-          </button>
+          <div className="flex flex-col items-center gap-3">
+            <button
+              disabled={me.stock.length === 0}
+              onClick={() => act((g) => drawCard(g, mySlot, labels))}
+              className="btn-primary"
+            >
+              Pesca una carta
+            </button>
+            {myDiscardTop && (
+              <div className="flex flex-wrap gap-2 justify-center">
+                {PILE_PLAY_TARGETS.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => playPileCard(opt)}
+                    className="btn-option"
+                  >
+                    {PILE_OPTION_LABEL[opt]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {!game.gameOver && game.flipped && myTurn && (
